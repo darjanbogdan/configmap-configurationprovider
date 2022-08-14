@@ -1,0 +1,75 @@
+﻿---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: secret-reader
+rules:
+  - apiGroups: [""]
+    #
+    # at the HTTP level, the name of the resource for accessing Secret
+    # objects is "secrets"
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: secret-reader-binding-cmcp-service
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: cmcp-service
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cmcp
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cmcp
+    spec:
+      containers:
+        - name: cmcp
+          image: dbogdan/configmapconfigurationprovider:latest
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: cmcp-configmap
+          imagePullPolicy: Always
+      imagePullSecrets:
+        - name: regcred
+  selector:
+    matchLabels:
+      app: cmcp
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cmcp-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+  selector:
+    app: cmcp
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cmcp-configmap
+data:
+  TestSettings__Prop: 'true'
+  TestSettings__Str: 'Testing Testing'
