@@ -2,101 +2,90 @@
 using k8s.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Linq;
+using System.Globalization;
 
 namespace ConfigMapConfigurationProvider;
 
 public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
 {
     private readonly ConfigMapConfigurationProviderSettings _settings;
+    private readonly Lazy<ILogger> _lazyLogger;
 
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly Kubernetes _kubernetes;
-    private Task _configMapPollingTask;
+    private readonly ConfigMapDataConverter _dataConverter;
+    private readonly Lazy<Kubernetes> _kubernetes;
 
     private bool disposedValue;
 
-    public ConfigMapConfigurationProvider(ConfigMapConfigurationProviderSettings settings)
+    public ConfigMapConfigurationProvider(ConfigMapConfigurationProviderSettings settings, ILoggerFactory loggerFactory)
     {
         _settings = settings;
-        
+        _lazyLogger = new Lazy<ILogger>(() => loggerFactory.CreateLogger<ConfigMapConfigurationProvider>());
+
         _cancellationTokenSource = new CancellationTokenSource();
-        _kubernetes = new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig());
+        _dataConverter = new ConfigMapDataConverter(_settings.SafeUpdate);
+        _kubernetes = new Lazy<Kubernetes>(() => new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig()));
     }
 
     public override void Load()
     {
-        _ = Task.Run(async () => 
+        _ = Task.Run(async () =>
         {
             try
             {
                 await LoadAsync().ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw; // fails to start polling config map
+                _lazyLogger.Value.LogError(ex, "ConfigMap polling failed to start");
             }
         });
     }
-    
+
 
     private async Task LoadAsync()
     {
-        var configMapResponse = _kubernetes.CoreV1.ListNamespacedConfigMapWithHttpMessagesAsync(
-            namespaceParameter: _settings.Kubernetes.DefaultNamespace, 
-            watch: true, 
-            fieldSelector: $"metadata.name={_settings.Kubernetes.Name}"
+        _lazyLogger.Value.LogTrace("ConfigMap {Name} changes polling initiated.", _settings.ConfigMapName);
+
+        var configMapResponse = _kubernetes.Value.CoreV1.ListNamespacedConfigMapWithHttpMessagesAsync(
+            namespaceParameter: _settings.DefaultNamespace,
+            watch: true,
+            fieldSelector: _settings.ConfigMapName is not null ? $"metadata.name={_settings.ConfigMapName}" : null
             );
 
         var configMapEnumerable = configMapResponse.WatchAsync<V1ConfigMap, V1ConfigMapList>(OnWatchError)
             .WithCancellation(_cancellationTokenSource.Token).ConfigureAwait(false);
-        
-        await foreach (var (eventType, configMapItem) in configMapEnumerable)
-        {
-            switch (eventType)
-            {
-                case WatchEventType.Added:
-                case WatchEventType.Modified:
-                    Data = ConvertData(configMapItem.Data);
-                    OnReload();
-                    continue;
-                default:
-                    Console.WriteLine($"{eventType} event type is not being handled.");
-                    continue;
-            }
-        }
 
-        //if (_configMapPollingTask != null && _settings.PollingInterval.HasValue)
-        //{
-        //    _configMapPollingTask = PollConfigMapChangesAsync();
-        //}
+        await foreach (var (eventType, configMap) in configMapEnumerable)
+        {
+            _lazyLogger.Value.LogTrace("Received ConfigMap {eventType} event with {Count} items.", eventType, configMap.Data.Count);
+
+            Action<WatchEventType, IDictionary<string, string>> action = eventType switch
+            {
+                WatchEventType.Added or WatchEventType.Modified or WatchEventType.Deleted => ReloadConfigurationData,
+                _ => LogUnhandledEvent
+            };
+
+            action(eventType, configMap.Data);
+        }
     }
 
-    private IDictionary<string, string> ConvertData(IDictionary<string, string> configMapData)
-        => configMapData.ToDictionary(
-            k => k.Key.Replace("__", ConfigurationPath.KeyDelimiter),
-            v => v.Value);
+    private void ReloadConfigurationData(WatchEventType eventType, IDictionary<string, string> configMapData)
+    {
+        Data = _dataConverter.ConvertData(currentConfigMapData: Data, rawConfigMapData: configMapData);
+        OnReload();
+        _lazyLogger.Value.LogInformation("ConfigMap configuration reloaded after {eventType} event", eventType);
+    }
+
+    private void LogUnhandledEvent(WatchEventType eventType, IDictionary<string, string> configMapData)
+    {
+        _lazyLogger.Value.LogTrace("{eventType} event is not being handled.", eventType);
+    }
 
     private void OnWatchError(Exception exception)
-    { 
-        // handle exception, log or surface
+    {
+        _lazyLogger.Value.LogError(exception, "ConfigMap polling error occurred, process needs to be restarted.");
     }
-
-    //private async Task PollConfigMapChangesAsync()
-    //{
-    //    while (_cancellationTokenSource.IsCancellationRequested is false)
-    //    {
-    //        await Task.Delay(_settings.PollingInterval.GetValueOrDefault(), _cancellationTokenSource.Token).ConfigureAwait(false);
-    //        try
-    //        {
-    //            await LoadAsync().ConfigureAwait(false);
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            Console.WriteLine(ex.ToString());
-    //        }
-    //    }
-    //}
 
     protected virtual void Dispose(bool disposing)
     {
@@ -107,7 +96,7 @@ public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
                 _cancellationTokenSource.Cancel();
                 _cancellationTokenSource.Dispose();
 
-                _kubernetes?.Dispose();
+                _kubernetes?.Value?.Dispose();
             }
 
             disposedValue = true;

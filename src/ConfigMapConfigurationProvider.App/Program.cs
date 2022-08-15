@@ -3,25 +3,22 @@ using ConfigMapConfigurationProvider.App.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddConfigMapConfiguration();
+// configuration
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Trace));
+builder.Configuration.AddConfigMapConfiguration(loggerFactory);
 
-// Add services to the container.
-
+// services
 builder.Services
     .AddOptions<ConfigMapConfigurationProviderSettings>()
     .Bind<ConfigMapConfigurationProviderSettings>(builder.Configuration.GetSection(ConfigMapConfigurationBuilderExtensions.DefaultSettingsSection));
 
 builder.Services
-    .AddOptions<TestSettings>()
-    .Bind<TestSettings>(builder.Configuration.GetSection("TestSettings"));
+    .AddOptions<WeatherForecastSettings>()
+    .Bind<WeatherForecastSettings>(builder.Configuration.GetSection("WeatherForecastSettings"));
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-
-app.UseAuthorization();
 
 app.MapControllers();
 

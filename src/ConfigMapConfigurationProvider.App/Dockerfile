@@ -10,10 +10,10 @@ COPY ["src/ConfigMapConfigurationProvider.App/ConfigMapConfigurationProvider.App
 RUN dotnet restore "src/ConfigMapConfigurationProvider.App/ConfigMapConfigurationProvider.App.csproj"
 COPY . .
 WORKDIR "/src/src/ConfigMapConfigurationProvider.App"
-RUN dotnet build "ConfigMapConfigurationProvider.App.csproj" -c Release -o /app/build
+RUN dotnet build "ConfigMapConfigurationProvider.App.csproj" -c Release -o /app/build --no-restore
 
 FROM build AS publish
-RUN dotnet publish "ConfigMapConfigurationProvider.App.csproj" -c Release -o /app/publish
+RUN dotnet publish "ConfigMapConfigurationProvider.App.csproj" -c Release -o /app/publish --no-build
 
 FROM base AS final
 WORKDIR /app

@@ -1,10 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<Language>latest</Language>
+	<IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>ConfigMapConfigurationProvider</PackageId>
+	<Title>ConfigMap ConfigurationProvider</Title>
+	<Description>ConfigurationProvider that relies on Kubernetes API to update application's Configuration object by polling for changes on selected ConfigMap object.</Description>
+	<PackageTags>ConfigMap, ConfigurationProvider, Configuration, Provider, Kubernetes</PackageTags>
+	<Authors>darjanbogdan</Authors>
+	<RepositoryUrl>https://github.com/darjanbogdan/configmap-configurationprovider</RepositoryUrl>
+	<PackageProjectUrl>https://github.com/darjanbogdan/configmap-configurationprovider/issues</PackageProjectUrl>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

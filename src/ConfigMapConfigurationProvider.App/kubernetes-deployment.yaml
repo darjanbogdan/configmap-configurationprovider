@@ -71,5 +71,5 @@ kind: ConfigMap
 metadata:
   name: cmcp-configmap
 data:
-  TestSettings__Prop: 'true'
-  TestSettings__Str: 'Testing Testing'
+  WeatherForecastSettings__SampleSize: '50'
+  WeatherForecastSettings__IncludeFahrenheit: 'true'

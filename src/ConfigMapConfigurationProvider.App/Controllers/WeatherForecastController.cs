@@ -12,26 +12,31 @@ namespace ConfigMapConfigurationProvider.App.Controllers
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
-        private readonly ILogger<WeatherForecastController> _logger;
-        private readonly IOptionsMonitor<TestSettings> _options;
+        private readonly IOptionsMonitor<WeatherForecastSettings> _options;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger, IOptionsMonitor<TestSettings> options)
+        public WeatherForecastController(IOptionsMonitor<WeatherForecastSettings> options)
         {
-            _logger = logger;
             _options = options;
         }
 
         [HttpGet]
         public IEnumerable<WeatherForecast> Get()
         {
-            _logger.LogInformation(_options.CurrentValue?.Prop?.ToString() ?? "null");
-            _logger.LogInformation(_options.CurrentValue?.Str ?? "null");
-
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            return Enumerable.Range(1, _options.CurrentValue.SampleSize.GetValueOrDefault()).Select(index =>
             {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                var forecast = new WeatherForecast
+                {
+                    Date = DateTime.Now.AddDays(index),
+                    TemperatureC = Random.Shared.Next(-20, 55),
+                    Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                };
+
+                if (_options.CurrentValue.IncludeFahrenheit is true)
+                {
+                    forecast.TemperatureF = 32 + (int)(forecast.TemperatureC / 0.5556);
+                }
+
+                return forecast;
             })
             .ToArray();
         }
