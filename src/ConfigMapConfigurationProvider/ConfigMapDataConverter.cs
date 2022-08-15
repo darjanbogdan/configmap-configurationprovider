@@ -41,8 +41,13 @@ public sealed class ConfigMapDataConverter
         string convertedKey = ConvertKey(newItem.Key);
 
         if (currentConfigMapData.TryGetValue(convertedKey, out string? currentValue) is false || currentValue is null)
-        { 
+        {
             return (convertedKey, newItem.Value); // return 'new' if 'current' doesn't exist or null
+        }
+
+        if (currentValue == newItem.Value)
+        {
+            return (convertedKey, currentValue); // skip parsing if values are the same
         }
 
         object? parsedCurrentValue = ParseToPrimitiveTypeOrDefault(currentValue);
