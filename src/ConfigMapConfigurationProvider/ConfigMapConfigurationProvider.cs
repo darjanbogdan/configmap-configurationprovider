@@ -23,7 +23,7 @@ public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
         _lazyLogger = new Lazy<ILogger>(() => loggerFactory.CreateLogger<ConfigMapConfigurationProvider>());
 
         _cancellationTokenSource = new CancellationTokenSource();
-        _dataConverter = new ConfigMapDataConverter(_settings.SafeUpdate);
+        _dataConverter = new ConfigMapDataConverter(_settings.SafeUpdate, _lazyLogger);
         _kubernetes = new Lazy<Kubernetes>(() => new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig()));
     }
 

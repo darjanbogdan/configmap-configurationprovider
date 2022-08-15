@@ -12,9 +12,9 @@ namespace ConfigMapConfigurationProvider;
 public sealed class ConfigMapDataConverter
 {
     private readonly bool _safeConversion;
-    private readonly ILogger _logger;
+    private readonly Lazy<ILogger> _logger;
 
-    public ConfigMapDataConverter(bool safeConversion, ILogger logger)
+    public ConfigMapDataConverter(bool safeConversion, Lazy<ILogger> logger)
     {
         _safeConversion = safeConversion;
         _logger = logger;
@@ -57,7 +57,7 @@ public sealed class ConfigMapDataConverter
             return (convertedKey, newItem.Value); // return 'new' in case 'current' and 'new' types are compatible
         }
 
-        _logger.LogWarning(
+        _logger.Value.LogWarning(
             "ConfigMap item {key} with the new value {newValue} is incompatible with the current value {currentValue}, update skipped.", 
             convertedKey, newItem.Value, currentValue);
 
