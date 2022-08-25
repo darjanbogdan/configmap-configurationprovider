@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConfigMapConfigurationProvi
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{A41D70D8-E4C6-4173-AF60-343055E000A6}"
 	ProjectSection(SolutionItems) = preProject
+		.dockerignore = .dockerignore
+		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		Directory.Build.props = Directory.Build.props
 		LICENSE = LICENSE
@@ -14,7 +16,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{A4
 		version.json = version.json
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigMapConfigurationProvider.App", "src\ConfigMapConfigurationProvider.App\ConfigMapConfigurationProvider.App.csproj", "{1C5D1AAC-63D1-4712-8731-C66CAA1492EC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConfigMapConfigurationProvider.App", "src\ConfigMapConfigurationProvider.App\ConfigMapConfigurationProvider.App.csproj", "{1C5D1AAC-63D1-4712-8731-C66CAA1492EC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigMapConfigurationProvider.Tests", "tests\ConfigMapConfigurationProvider.Tests\ConfigMapConfigurationProvider.Tests.csproj", "{BA6A5608-F308-4B07-8EA2-9A608238127D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigMapConfigurationProvider.App.IntegrationTests", "tests\ConfigMapConfigurationProvider.App.IntegrationTests\ConfigMapConfigurationProvider.App.IntegrationTests.csproj", "{9638E208-D93D-4271-B2AC-EC6A9E3B30F4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{1B628A79-4C0C-497F-A4AA-B7770B0F1E19}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,9 +38,20 @@ Global
 		{1C5D1AAC-63D1-4712-8731-C66CAA1492EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1C5D1AAC-63D1-4712-8731-C66CAA1492EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1C5D1AAC-63D1-4712-8731-C66CAA1492EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA6A5608-F308-4B07-8EA2-9A608238127D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA6A5608-F308-4B07-8EA2-9A608238127D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA6A5608-F308-4B07-8EA2-9A608238127D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA6A5608-F308-4B07-8EA2-9A608238127D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9638E208-D93D-4271-B2AC-EC6A9E3B30F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9638E208-D93D-4271-B2AC-EC6A9E3B30F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9638E208-D93D-4271-B2AC-EC6A9E3B30F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9638E208-D93D-4271-B2AC-EC6A9E3B30F4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1B628A79-4C0C-497F-A4AA-B7770B0F1E19} = {A41D70D8-E4C6-4173-AF60-343055E000A6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F87112E0-0917-4B27-833A-BAD9E0DB61FA}

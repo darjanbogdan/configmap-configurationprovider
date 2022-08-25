@@ -1,27 +1,38 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ConfigMapConfigurationProvider;
 
+/// <summary>
+/// Converter of the ConfigMap data
+/// </summary>
 public sealed class ConfigMapDataConverter
 {
     private readonly bool _safeConversion;
     private readonly Lazy<ILogger> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConfigMapDataConverter"/> class.
+    /// </summary>
+    /// <param name="safeConversion">if set to <c>true</c> [safe conversion].</param>
+    /// <param name="logger">The logger.</param>
     public ConfigMapDataConverter(bool safeConversion, Lazy<ILogger> logger)
     {
         _safeConversion = safeConversion;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Converts the ConfigMap data.
+    /// </summary>
+    /// <param name="currentConfigMapData">The current configuration map data.</param>
+    /// <param name="rawConfigMapData">The raw configuration map data.</param>
+    /// <returns></returns>
     public IDictionary<string, string> ConvertData(IDictionary<string, string> currentConfigMapData, IDictionary<string, string> rawConfigMapData)
-        => _safeConversion ? ConvertDataKeysSafe(currentConfigMapData, rawConfigMapData) : ConvertDataKeysUnsafe(rawConfigMapData);
+        => _safeConversion 
+            ? ConvertDataKeysSafe(currentConfigMapData, rawConfigMapData) 
+            : ConvertDataKeysUnsafe(rawConfigMapData);
 
     private IDictionary<string, string> ConvertDataKeysSafe(IDictionary<string, string> currentConfigMapData, IDictionary<string, string> configMapData)
     {
@@ -29,14 +40,21 @@ public sealed class ConfigMapDataConverter
         
         foreach (var newItem in configMapData)
         {
-            (string key, string value) = ConvertItemSafely(currentConfigMapData, newItem);
+            (string key, string value) = ConvertItemSafe(currentConfigMapData, newItem);
             convertedConfigMapData.Add(key, value);
         }
 
         return convertedConfigMapData;
     }
 
-    private (string key, string value) ConvertItemSafely(IDictionary<string, string> currentConfigMapData, KeyValuePair<string, string> newItem)
+    private static IDictionary<string, string> ConvertDataKeysUnsafe(IDictionary<string, string> rawConfigMapData)
+        => rawConfigMapData.ToDictionary(
+            i => ConvertKey(i.Key),
+            i => i.Value);
+
+    private static string ConvertKey(string key) => key.Replace("__", ConfigurationPath.KeyDelimiter);
+
+    private (string key, string value) ConvertItemSafe(IDictionary<string, string> currentConfigMapData, KeyValuePair<string, string> newItem)
     {
         string convertedKey = ConvertKey(newItem.Key);
 
@@ -69,14 +87,18 @@ public sealed class ConfigMapDataConverter
         return (convertedKey, currentValue); // return 'current' in case 'new' incompatible
     }
 
-    private object ParseToPrimitiveTypeOrDefault(string value)
+    private static object ParseToPrimitiveTypeOrDefault(string value)
     {
         return
-            TryParse<Boolean>(Boolean.Parse, value)
-            ?? TryParse<Int32>(Int32.Parse, value)
-            ?? TryParse<Int64>(Int64.Parse, value)
-            ?? TryParse<Single>(Single.Parse, value)
-            ?? TryParse<Double>(Double.Parse, value)
+            TryParse(Boolean.Parse, value)
+            ?? TryParse(Int32.Parse, value)
+            ?? TryParse(Int64.Parse, value)
+            ?? TryParse(Single.Parse, value)
+            ?? TryParse(Double.Parse, value)
+            ?? TryParse(TimeSpan.Parse, value)
+            ?? TryParse(TimeOnly.Parse, value)
+            ?? TryParse(DateOnly.Parse, value)
+            ?? TryParse(DateTime.Parse, value)
             ?? value as object;
 
         T? TryParse<T>(Func<string, T> parse, string value) where T : struct
@@ -92,7 +114,7 @@ public sealed class ConfigMapDataConverter
         }
     }
 
-    private bool ValueTypesCompatible(string newValue, object currentValue)
+    private static bool ValueTypesCompatible(string newValue, object currentValue)
     {
         try
         {
@@ -104,11 +126,4 @@ public sealed class ConfigMapDataConverter
             return false;
         }
     }
-
-    private static IDictionary<string, string> ConvertDataKeysUnsafe(IDictionary<string, string> rawConfigMapData)
-        => rawConfigMapData.ToDictionary(
-            i => ConvertKey(i.Key),
-            i => i.Value);
-
-    private static string ConvertKey(string key) => key.Replace("__", ConfigurationPath.KeyDelimiter);
 }

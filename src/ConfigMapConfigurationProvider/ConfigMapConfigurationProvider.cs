@@ -6,10 +6,15 @@ using System.Globalization;
 
 namespace ConfigMapConfigurationProvider;
 
+/// <summary>
+/// <see cref="ConfigurationProvider"/> for Kubernetes ConfigMap resource
+/// </summary>
+/// <seealso cref="Microsoft.Extensions.Configuration.ConfigurationProvider" />
+/// <seealso cref="System.IDisposable" />
 public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
 {
     private readonly ConfigMapConfigurationProviderSettings _settings;
-    private readonly Lazy<ILogger> _lazyLogger;
+    private readonly Lazy<ILogger> _Logger;
 
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly ConfigMapDataConverter _dataConverter;
@@ -17,40 +22,45 @@ public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
 
     private bool disposedValue;
 
-    public ConfigMapConfigurationProvider(ConfigMapConfigurationProviderSettings settings, ILoggerFactory loggerFactory)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConfigMapConfigurationProvider"/> class.
+    /// </summary>
+    /// <param name="settings">The settings.</param>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="kubernetes">The kubernetes client instance.</param>
+    public ConfigMapConfigurationProvider(ConfigMapConfigurationProviderSettings settings, Lazy<ILogger> logger, Lazy<Kubernetes> kubernetes)
     {
         _settings = settings;
-        _lazyLogger = new Lazy<ILogger>(() => loggerFactory.CreateLogger<ConfigMapConfigurationProvider>());
+        _Logger = logger;
+        _kubernetes = kubernetes;
 
         _cancellationTokenSource = new CancellationTokenSource();
-        _dataConverter = new ConfigMapDataConverter(_settings.SafeUpdate, _lazyLogger);
-        _kubernetes = new Lazy<Kubernetes>(() => new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig()));
+        _dataConverter = new ConfigMapDataConverter(_settings.SafeUpdate, _Logger);
     }
 
+
+    /// <inheritdoc/>
     public override void Load()
     {
-        _ = Task.Run(async () =>
+        try
         {
-            try
-            {
-                await LoadAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _lazyLogger.Value.LogError(ex, "ConfigMap polling failed to start");
-            }
-        });
+            LoadAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex) when (_settings.IsOptional)
+        {
+            _Logger.Value.LogError(ex, "ConfigMap polling failed to start, skipping as it's optional.");
+        }
     }
-
 
     private async Task LoadAsync()
     {
-        _lazyLogger.Value.LogTrace("ConfigMap {Name} changes polling initiated.", _settings.ConfigMapName);
+        _Logger.Value.LogTrace("ConfigMap {Name} changes polling initiated.", _settings.ConfigMapName);
 
         var configMapResponse = _kubernetes.Value.CoreV1.ListNamespacedConfigMapWithHttpMessagesAsync(
             namespaceParameter: _settings.DefaultNamespace,
             watch: true,
-            fieldSelector: _settings.ConfigMapName is not null ? $"metadata.name={_settings.ConfigMapName}" : null
+            fieldSelector: _settings.ConfigMapName is not null ? $"metadata.name={_settings.ConfigMapName}" : null,
+            allowWatchBookmarks: true
             );
 
         var configMapEnumerable = configMapResponse.WatchAsync<V1ConfigMap, V1ConfigMapList>(OnWatchError)
@@ -58,15 +68,16 @@ public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
 
         await foreach (var (eventType, configMap) in configMapEnumerable)
         {
-            _lazyLogger.Value.LogTrace("Received ConfigMap {eventType} event with {Count} items.", eventType, configMap.Data.Count);
+            _Logger.Value.LogTrace("Received ConfigMap {eventType} event with {Count} items.", eventType, configMap.Data.Count);
 
-            Action<WatchEventType, IDictionary<string, string>> action = eventType switch
+            if (eventType is WatchEventType.Added or WatchEventType.Modified or WatchEventType.Deleted)
             {
-                WatchEventType.Added or WatchEventType.Modified or WatchEventType.Deleted => ReloadConfigurationData,
-                _ => LogUnhandledEvent
-            };
-
-            action(eventType, configMap.Data);
+                ReloadConfigurationData(eventType, configMap.Data);
+            }
+            else
+            {
+                LogUnhandledEvent(eventType);
+            }
         }
     }
 
@@ -74,19 +85,24 @@ public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
     {
         Data = _dataConverter.ConvertData(currentConfigMapData: Data, rawConfigMapData: configMapData);
         OnReload();
-        _lazyLogger.Value.LogInformation("ConfigMap configuration reloaded after {eventType} event", eventType);
+        _Logger.Value.LogInformation("ConfigMap configuration reloaded after {eventType} event", eventType);
     }
 
-    private void LogUnhandledEvent(WatchEventType eventType, IDictionary<string, string> configMapData)
+    private void LogUnhandledEvent(WatchEventType eventType)
     {
-        _lazyLogger.Value.LogTrace("{eventType} event is not being handled.", eventType);
+        _Logger.Value.LogTrace("{eventType} event is not being handled.", eventType);
     }
 
     private void OnWatchError(Exception exception)
     {
-        _lazyLogger.Value.LogError(exception, "ConfigMap polling error occurred, process needs to be restarted.");
+        _Logger.Value.LogError(exception, "ConfigMap polling error occurred, process needs to be restarted.");
     }
 
+    /// <summary>
+    /// Disposes the the instance.
+    /// </summary>
+    /// <param name="disposing">if set to <c>true</c> [disposing].</param>
+    /// <returns></returns>
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)
@@ -103,6 +119,10 @@ public class ConfigMapConfigurationProvider : ConfigurationProvider, IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases unmanaged and - optionally - managed resources.
+    /// </summary>
+    /// <returns></returns>
     public void Dispose()
     {
         Dispose(disposing: true);

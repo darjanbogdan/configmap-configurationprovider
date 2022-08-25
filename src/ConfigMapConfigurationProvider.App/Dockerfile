@@ -6,14 +6,14 @@ EXPOSE 80
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["src/ConfigMapConfigurationProvider.App/ConfigMapConfigurationProvider.App.csproj", "src/ConfigMapConfigurationProvider.App/"]
-RUN dotnet restore "src/ConfigMapConfigurationProvider.App/ConfigMapConfigurationProvider.App.csproj"
+COPY ["ConfigMapConfigurationProvider.App.csproj", ""]
+RUN dotnet restore
 COPY . .
-WORKDIR "/src/src/ConfigMapConfigurationProvider.App"
-RUN dotnet build "ConfigMapConfigurationProvider.App.csproj" -c Release -o /app/build --no-restore
+RUN dotnet build -c Release --no-restore
 
 FROM build AS publish
-RUN dotnet publish "ConfigMapConfigurationProvider.App.csproj" -c Release -o /app/publish --no-build
+WORKDIR /src
+RUN dotnet publish -c Release -o /app/publish --no-build
 
 FROM base AS final
 WORKDIR /app
