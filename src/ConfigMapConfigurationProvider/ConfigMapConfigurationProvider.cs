@@ -2,7 +2,6 @@
 using k8s.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 
 namespace ConfigMapConfigurationProvider;
 

@@ -1,7 +1,6 @@
 <Project>
   <PropertyGroup>
 	<Deterministic>true</Deterministic>
-	<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	<WarnOnPackingNonPackableProject>true</WarnOnPackingNonPackableProject>
   </PropertyGroup>
 

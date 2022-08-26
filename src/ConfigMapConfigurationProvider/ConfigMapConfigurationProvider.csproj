@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
 	<Language>latest</Language>
 	<IsPackable>true</IsPackable>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup>

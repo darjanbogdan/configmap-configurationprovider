@@ -1,25 +1,41 @@
+using AutoFixture;
+using FluentAssertions;
+using k8s;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Moq;
+using System;
 using Xunit;
 
-namespace ConfigMapConfigurationProvider.Tests
+namespace ConfigMapConfigurationProvider.Tests;
+
+public class ConfigMapConfigurationSourceTests
 {
-    public class ConfigMapConfigurationSourceTests
+    [Fact]
+    public void Constructor_throws_when_settings_null()
     {
-        [Fact]
-        public void Build_returns_custom_configured_provider()
-        {
+        var createInstance = () => new ConfigMapConfigurationSource(configMapSettingsSection: null, optional: true);
 
-        }
+        createInstance.Should().ThrowExactly<ArgumentNullException>().WithMessage("*configMapSettingsSection*");
+    }
 
-        [Fact]
-        public void Build_returns_default_provider()
-        {
+    [Fact]
+    public void Constructor_throws_when_logger_null()
+    {
+        Lazy<Kubernetes> kubernetes = new Lazy<Kubernetes>(() => Mock.Of<Kubernetes>());
 
-        }
+        var createInstance = () => new ConfigMapConfigurationSource("section", logger: null, kubernetes, optional: true);
 
-        [Fact]
-        public void Build_returns_provider_with_configured_optional_flag()
-        {
+        createInstance.Should().ThrowExactly<ArgumentNullException>().WithMessage("*logger*");
+    }
 
-        }
+    [Fact]
+    public void Constructor_throws_when_kubernetes_null()
+    {
+        Lazy<ILogger> logger = new Lazy<ILogger>(() => Mock.Of<ILogger>());
+
+        var createInstance = () => new ConfigMapConfigurationSource("section", logger, kubernetes: null, optional: true) ;
+
+        createInstance.Should().ThrowExactly<ArgumentNullException>().WithMessage("*kubernetes*");
     }
 }

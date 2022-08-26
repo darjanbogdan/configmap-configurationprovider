@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace ConfigMapConfigurationProvider;
 
@@ -20,7 +21,7 @@ public sealed class ConfigMapDataConverter
     public ConfigMapDataConverter(bool safeConversion, Lazy<ILogger> logger)
     {
         _safeConversion = safeConversion;
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -30,9 +31,18 @@ public sealed class ConfigMapDataConverter
     /// <param name="rawConfigMapData">The raw configuration map data.</param>
     /// <returns></returns>
     public IDictionary<string, string> ConvertData(IDictionary<string, string> currentConfigMapData, IDictionary<string, string> rawConfigMapData)
-        => _safeConversion 
-            ? ConvertDataKeysSafe(currentConfigMapData, rawConfigMapData) 
-            : ConvertDataKeysUnsafe(rawConfigMapData);
+    {
+        _ = currentConfigMapData ?? throw new ArgumentNullException(nameof(currentConfigMapData));
+        _ = rawConfigMapData ?? throw new ArgumentNullException(nameof(rawConfigMapData));
+
+        if (_safeConversion)
+        {
+            return ConvertDataKeysSafe(currentConfigMapData, rawConfigMapData);
+        }
+
+        return ConvertDataKeysUnsafe(rawConfigMapData);
+    }
+
 
     private IDictionary<string, string> ConvertDataKeysSafe(IDictionary<string, string> currentConfigMapData, IDictionary<string, string> configMapData)
     {
@@ -91,10 +101,10 @@ public sealed class ConfigMapDataConverter
     {
         return
             TryParse(Boolean.Parse, value)
-            ?? TryParse(Int32.Parse, value)
-            ?? TryParse(Int64.Parse, value)
-            ?? TryParse(Single.Parse, value)
-            ?? TryParse(Double.Parse, value)
+            ?? TryParseNumber(Int32.Parse, value, NumberStyles.Integer)
+            ?? TryParseNumber(Int64.Parse, value, NumberStyles.Integer)
+            ?? TryParseNumber(Single.Parse, value, NumberStyles.Float)
+            ?? TryParseNumber(Double.Parse, value, NumberStyles.Float)
             ?? TryParse(TimeSpan.Parse, value)
             ?? TryParse(TimeOnly.Parse, value)
             ?? TryParse(DateOnly.Parse, value)
@@ -112,18 +122,40 @@ public sealed class ConfigMapDataConverter
                 return null;
             }
         }
+
+        T? TryParseNumber<T>(Func<string, NumberStyles, T> parse, string value, NumberStyles numberStyles) where T : struct
+        {
+            try
+            {
+                return parse(value, numberStyles);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
     }
 
     private static bool ValueTypesCompatible(string newValue, object currentValue)
     {
         try
         {
-            var converter = TypeDescriptor.GetConverter(currentValue.GetType());
-            return converter.IsValid(newValue);
+            return currentValue switch
+            {
+                DateOnly => DateOnly.TryParse(newValue, out _), // Ref: https://github.com/dotnet/runtime/issues/74682
+                TimeOnly => TimeOnly.TryParse(newValue, out _),
+                _ => IsCompatible()
+            };
         }
         catch (Exception)
         {
             return false;
+        }
+
+        bool IsCompatible()
+        {
+            var converter = TypeDescriptor.GetConverter(currentValue);
+            return converter.IsValid(newValue);
         }
     }
 }

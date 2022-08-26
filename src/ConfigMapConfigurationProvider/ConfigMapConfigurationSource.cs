@@ -59,6 +59,12 @@ public class ConfigMapConfigurationSource : IConfigurationSource
         var baseConfiguration = builder.Build();
         
         var configMapSettings = baseConfiguration.GetSection(_configMapSettingsSection).Get<ConfigMapConfigurationProviderSettings>();
+
+        if (configMapSettings is null)
+        {
+            throw new ArgumentException($"Section '{_configMapSettingsSection}' couldn't be bounded to '{nameof(ConfigMapConfigurationProviderSettings)}' instance.");
+        }
+        
         configMapSettings.SetOptional(_optional);
 
         return new ConfigMapConfigurationProvider(configMapSettings, _logger!, _kubernetes!);
