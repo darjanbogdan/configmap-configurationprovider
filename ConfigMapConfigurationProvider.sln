@@ -24,6 +24,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConfigMapConfigurationProvi
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{1B628A79-4C0C-497F-A4AA-B7770B0F1E19}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".gitlab", ".gitlab", "{1D65252C-6453-48D2-BE72-9B316D901B32}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{C424E357-6F97-44BA-845C-88EC883EFF4E}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +59,8 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1B628A79-4C0C-497F-A4AA-B7770B0F1E19} = {A41D70D8-E4C6-4173-AF60-343055E000A6}
+		{1D65252C-6453-48D2-BE72-9B316D901B32} = {A41D70D8-E4C6-4173-AF60-343055E000A6}
+		{C424E357-6F97-44BA-845C-88EC883EFF4E} = {1D65252C-6453-48D2-BE72-9B316D901B32}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F87112E0-0917-4B27-833A-BAD9E0DB61FA}
